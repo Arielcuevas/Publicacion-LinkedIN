@@ -993,6 +993,147 @@
         .sec7-body p:first-of-type {
             text-indent: 0;
         }
+
+        /* =====================================================
+           RESPONSIVE MÓVIL — OPTIMIZACIÓN COMPLETA
+           ===================================================== */
+
+        @media (max-width: 768px) {
+
+            /* Layout general */
+            body { font-size: 0.97rem; }
+
+            .article-wrapper {
+                padding: 1rem 0;
+                gap: 0;
+            }
+
+            /* Manuscrito */
+            .manuscript {
+                padding: 1.5rem 1.1rem 2.5rem;
+                border-radius: 0;
+                border-left: none;
+                border-right: none;
+                box-shadow: none;
+            }
+
+            /* Cabecera */
+            .journal-tag {
+                flex-direction: column;
+                gap: 0.2rem;
+                font-size: 0.68rem;
+            }
+
+            .article-title {
+                font-size: 1.35rem;
+                line-height: 1.35;
+                margin-bottom: 1.25rem;
+            }
+
+            .article-dates {
+                flex-wrap: wrap;
+                gap: 0.3rem 1rem;
+                font-size: 0.68rem;
+            }
+
+            /* Doble columna → columna única */
+            .two-columns {
+                column-count: 1;
+                font-size: 0.92rem;
+            }
+
+            /* Ecuaciones con scroll horizontal */
+            .equation-wrapper {
+                overflow-x: auto;
+                padding: 0.75rem 0.5rem;
+            }
+
+            /* Tablas con scroll horizontal */
+            table {
+                display: block;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                font-size: 0.75rem;
+            }
+
+            /* Pestañas del visualizador CFD */
+            .fig-nav-tabs {
+                flex-wrap: wrap;
+                justify-content: flex-start;
+                gap: 0.2rem;
+                padding-bottom: 0.4rem;
+            }
+
+            .fig-tab-btn {
+                font-size: 0.72rem;
+                padding: 0.4rem 0.6rem;
+            }
+
+            /* Selector de variable */
+            .fig-sub-selector {
+                flex-wrap: wrap;
+                width: 100%;
+                justify-content: center;
+            }
+
+            /* Viewport del video */
+            .fig-viewport {
+                min-height: 200px;
+                max-height: 340px;
+            }
+
+            .fig-media-info {
+                padding: 0.75rem 1rem 1rem;
+            }
+
+            .fig-media-title { font-size: 0.78rem; }
+            .fig-media-desc  { font-size: 0.75rem; }
+
+            /* Nomograma */
+            .interactive-nomogram { padding: 1.25rem 1rem; }
+
+            /* Abstract */
+            .abstract-container { padding: 1.25rem; }
+            .abstract-text { font-size: 0.88rem; }
+
+            /* Figuras de evidencia */
+            .evidence-figure { margin: 1.25rem 0; }
+
+            /* Agradecimientos / Referencias */
+            .ref-list li { font-size: 0.75rem; }
+
+            /* Headings */
+            h2 { font-size: 1rem; }
+            h3 { font-size: 0.92rem; }
+
+            .scientific-figure { padding: 1rem; }
+
+            /* SVG plots */
+            svg { max-width: 100%; height: auto; }
+        }
+
+        @media (max-width: 420px) {
+
+            .article-title { font-size: 1.15rem; }
+
+            .manuscript { padding: 1.1rem 0.85rem 2rem; }
+
+            .fig-tab-btn {
+                font-size: 0.66rem;
+                padding: 0.35rem 0.5rem;
+            }
+
+            .fig-viewport {
+                min-height: 160px;
+                max-height: 260px;
+            }
+
+            .fig-type-badge { font-size: 0.55rem; }
+
+            .nomogram-ku-val { font-size: 2.5rem; }
+
+            .control-slider { width: 100%; }
+        }
     </style>
 </head>
 <body>
