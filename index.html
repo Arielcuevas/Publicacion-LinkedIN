@@ -1,0 +1,1931 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modelado CFD: Elevador NH3 — Análisis de Estabilidad y Taponamiento por Control Obsoleto · Reficiencia</title>
+    
+    <!-- Google Fonts: Inter para UI discreta, Lora para el cuerpo del manuscrito -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Lora:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <!-- MathJax para el renderizado científico impecable de LaTeX -->
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']]
+            }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+    <style>
+        /* Estilos Editoriales Académicos Premium - Estilo Distill.pub / eLife / Nature */
+        :root {
+            --bg-page: #FCFBF9;         /* Off-white / Cream background típico de Distill */
+            --bg-paper: #FFFFFF;
+            --text-dark: #1F2937;       /* Dark slate gray para máxima legibilidad */
+            --text-muted: #5E6977;      /* Muted gray para anotaciones y TOC */
+            --primary: #0F4C81;         /* Oxford Navy Accent para links y títulos */
+            --border-color: #E2E8F0;    /* Borde sutil */
+            --danger: #9B1C1C;          /* Rojo académico sobrio */
+            --success: #065F46;         /* Verde académico sobrio */
+            --font-serif: 'Lora', Georgia, 'Times New Roman', serif;
+            --font-sans: 'Inter', -apple-system, sans-serif;
+            --transition-smooth: all 0.2s ease-in-out;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font-serif);
+            background-color: var(--bg-page);
+            color: var(--text-dark);
+            line-height: 1.8;
+            font-size: 1.05rem;
+            display: flex;
+            justify-content: center;
+        }
+
+        /* DISEÑO DE CONTENEDOR EN REJILLA ACADÉMICA (GRID DE 2 COLUMNAS STICKY) */
+        .article-wrapper {
+            max-width: 1550px;
+            width: 100%;
+            display: grid;
+            grid-template-columns: 260px 1fr;
+            gap: 4rem;
+            padding: 4rem 2rem;
+            position: relative;
+        }
+
+        @media (max-width: 1024px) {
+            .article-wrapper {
+                grid-template-columns: 1fr;
+                gap: 2rem;
+                padding: 2rem 1rem;
+            }
+            .sidebar-toc {
+                display: none; /* Ocultar TOC flotante en pantallas pequeñas */
+            }
+        }
+
+        /* COLUMNA DE NAVEGACIÓN Y METADATOS (STICKY SIDEBAR) */
+        .sidebar-toc {
+            position: sticky;
+            top: 4rem;
+            height: calc(100vh - 8rem);
+            display: flex;
+            flex-direction: column;
+            gap: 2.5rem;
+            font-family: var(--font-sans);
+        }
+
+        .toc-header {
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: var(--text-muted);
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.5rem;
+        }
+
+        .toc-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .toc-link {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            text-decoration: none;
+            cursor: pointer;
+            transition: var(--transition-smooth);
+            border-left: 2px solid transparent;
+            padding-left: 0.75rem;
+            display: block;
+        }
+
+        .toc-link:hover {
+            color: var(--primary);
+            border-left-color: var(--border-color);
+        }
+
+        .toc-link.active {
+            color: var(--primary);
+            border-left-color: var(--primary);
+            font-weight: 600;
+        }
+
+        .metadata-box {
+            margin-top: auto;
+            border-top: 1px solid var(--border-color);
+            padding-top: 1.5rem;
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            line-height: 1.5;
+        }
+
+        .metadata-box a {
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        .metadata-box a:hover {
+            text-decoration: underline;
+        }
+
+        /* COLUMNA DEL MANUSCRITO PRINCIPAL */
+        .manuscript {
+            background-color: var(--bg-paper);
+            padding: 5rem 6rem;
+            border: 1px solid #E5E7EB;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            border-radius: 4px;
+            max-width: 1150px;
+        }
+
+        /* LAYOUT ACADÉMICO A DOBLE COLUMNA TIPO PAPER (ELSEVIER/ASME) */
+        .two-columns {
+            column-count: 2;
+            column-gap: 3.5rem;
+            text-align: justify;
+            font-size: 0.95rem;
+            line-height: 1.75;
+            margin-bottom: 2.5rem;
+            color: var(--text-dark);
+            font-family: var(--font-serif);
+        }
+
+        .two-columns h2 {
+            column-span: all;
+            border-bottom: 1px solid #E5E7EB;
+            padding-bottom: 0.35rem;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+            color: #000000;
+            font-family: var(--font-display);
+            break-after: avoid;
+        }
+
+        .two-columns h3 {
+            margin-top: 1.5rem;
+            margin-bottom: 0.75rem;
+            color: #000000;
+            font-family: var(--font-display);
+            break-after: avoid;
+            break-inside: avoid;
+        }
+        
+        .two-columns p {
+            margin-bottom: 1rem;
+            text-indent: 1.5rem;
+        }
+        
+        .two-columns p:first-of-type, .two-columns h3 + p {
+            text-indent: 0 !important;
+        }
+        
+        .two-columns ul, .two-columns ol {
+            padding-left: 1.5rem;
+            margin-bottom: 1rem;
+            text-align: left;
+        }
+        
+        .two-columns li {
+            margin-bottom: 0.35rem;
+        }
+
+
+        @media (max-width: 768px) {
+            .manuscript {
+                padding: 2.5rem 1.5rem;
+            }
+        }
+
+        /* CABECERA EDITORIAL CIENTÍFICA */
+        .journal-tag {
+            font-family: var(--font-sans);
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            border-bottom: 1px solid #000000;
+            padding-bottom: 0.5rem;
+            margin-bottom: 3rem;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .article-title {
+            font-family: var(--font-sans);
+            font-size: 2.1rem;
+            font-weight: 700;
+            line-height: 1.3;
+            color: #000000;
+            margin-bottom: 2rem;
+            text-align: left;
+            letter-spacing: -0.5px;
+        }
+
+        .author-section {
+            font-family: var(--font-sans);
+            margin-bottom: 3rem;
+        }
+
+        .author-name {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--text-dark);
+            margin-bottom: 0.25rem;
+        }
+
+        .author-affiliation {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            font-style: italic;
+            line-height: 1.4;
+        }
+
+        .article-dates {
+            font-family: var(--font-sans);
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            border-top: 1px solid var(--border-color);
+            border-bottom: 1px solid var(--border-color);
+            padding: 0.5rem 0;
+            margin-bottom: 3.5rem;
+            display: flex;
+            gap: 1.5rem;
+        }
+
+        .article-dates strong {
+            color: #000000;
+        }
+
+        /* SECCIONES Y PÁRRAFOS ACADÉMICOS */
+        h2 {
+            font-family: var(--font-sans);
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #000000;
+            margin-top: 3.5rem;
+            margin-bottom: 1.2rem;
+            border-bottom: 1px solid #000000;
+            padding-bottom: 0.35rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        h3 {
+            font-family: var(--font-sans);
+            font-size: 1.02rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-top: 2rem;
+            margin-bottom: 0.8rem;
+        }
+
+        p {
+            margin-bottom: 1.6rem;
+            text-align: justify;
+            text-indent: 2rem;
+        }
+
+        p:first-of-type, h2 + p, h3 + p, .abstract-text {
+            text-indent: 0;
+        }
+
+        /* ABSTRACT EDITORIAL */
+        .abstract-container {
+            background-color: #F9FAFB;
+            border: 1px solid var(--border-color);
+            padding: 2rem;
+            margin-bottom: 3.5rem;
+            border-radius: 2px;
+        }
+
+        .abstract-title {
+            font-family: var(--font-sans);
+            font-size: 0.85rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.75rem;
+            color: #000000;
+        }
+
+        .abstract-text {
+            font-size: 0.92rem;
+            line-height: 1.7;
+            color: #374151;
+            text-align: justify;
+            margin-bottom: 1.2rem;
+        }
+
+        .keywords-line {
+            font-family: var(--font-sans);
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            border-top: 1px dashed var(--border-color);
+            padding-top: 0.6rem;
+        }
+
+        .keywords-line strong {
+            color: #000000;
+        }
+
+        /* NOMENCLATURA ACADÉMICA CON FILTRO */
+        .nomenclature-box {
+            background-color: #FBFBFC;
+            border: 1px solid var(--border-color);
+            padding: 1.5rem 2rem;
+            margin-bottom: 3.5rem;
+        }
+
+        .nom-title {
+            font-family: var(--font-sans);
+            font-size: 0.85rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--primary);
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.4rem;
+            margin-bottom: 1rem;
+        }
+
+        .nom-filter {
+            width: 100%;
+            padding: 0.5rem 0.75rem;
+            border: 1px solid var(--border-color);
+            border-radius: 2px;
+            font-family: var(--font-sans);
+            font-size: 0.8rem;
+            margin-bottom: 1.25rem;
+            outline: none;
+        }
+
+        .nom-filter:focus {
+            border-color: var(--primary);
+        }
+
+        .nom-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem 2rem;
+            font-family: var(--font-sans);
+            font-size: 0.8rem;
+        }
+
+        .nom-row {
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px dotted var(--border-color);
+            padding-bottom: 0.2rem;
+        }
+
+        .nom-symbol {
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .nom-definition {
+            color: var(--text-muted);
+            text-align: right;
+        }
+
+        /* BLOQUES DE ECUACIONES */
+        .equation-wrapper {
+            margin: 2.2rem 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .equation-content {
+            flex-grow: 1;
+            text-align: center;
+        }
+
+        .equation-number {
+            font-family: var(--font-sans);
+            font-size: 0.85rem;
+            color: #000000;
+            padding-left: 1rem;
+        }
+
+        /* FIGURAS INTERACTIVAS (ELITE SCIENTIFIC PRESENTATION) */
+        .scientific-figure {
+            margin: 3rem 0;
+            border: 1px solid var(--border-color);
+            background-color: #FFFFFF;
+            padding: 1.75rem 1.75rem 1.5rem;
+            text-align: center;
+            border-radius: 10px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.07), 0 1px 4px rgba(0,0,0,0.04);
+        }
+
+        .fig-nav-tabs {
+            display: flex;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            list-style: none;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 0;
+            font-family: var(--font-sans);
+        }
+
+        .fig-tab-btn {
+            padding: 0.5rem 1rem;
+            font-size: 0.78rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            background: none;
+            border: none;
+            border-bottom: 3px solid transparent;
+            margin-bottom: -2px;
+            cursor: pointer;
+            border-radius: 0;
+            transition: var(--transition-smooth);
+        }
+
+        .fig-tab-btn:hover {
+            color: var(--primary);
+            background-color: #F3F4F6;
+        }
+
+        /* Colores distintivos por caso */
+        #fig-btn-c1.active {
+            color: #065F46;
+            border-bottom-color: #065F46;
+            font-weight: 700;
+            background-color: #F0FDF4;
+        }
+        #fig-btn-c2.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+            font-weight: 700;
+            background-color: #EFF6FF;
+        }
+        #fig-btn-c3.active {
+            color: var(--danger);
+            border-bottom-color: var(--danger);
+            font-weight: 700;
+            background-color: #FEF2F2;
+        }
+
+        .fig-sub-selector {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.4rem;
+            margin-bottom: 1rem;
+            font-family: var(--font-sans);
+            background-color: #F8F9FA;
+            padding: 0.4rem;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            width: fit-content;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .fig-sub-btn {
+            padding: 0.3rem 0.9rem;
+            font-size: 0.73rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            border: none;
+            background-color: transparent;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: var(--transition-smooth);
+        }
+
+        .fig-sub-btn.active {
+            background-color: #FFFFFF;
+            color: var(--primary);
+            box-shadow: 0 1px 4px rgba(0,0,0,0.12);
+            font-weight: 600;
+        }
+
+        .fig-sub-btn:hover:not(.active) {
+            background-color: #EFEFEF;
+            color: var(--text-dark);
+        }
+
+        .fig-media-container {
+            width: 100%;
+            height: auto;
+            background-color: #0d1117;
+            border: 1px solid #2d3748;
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: center;
+            padding: 0;
+            position: relative;
+            overflow: hidden;
+            transition: opacity 0.15s ease-in-out;
+        }
+
+        .fig-viewport {
+            width: 100%;
+            min-height: 460px;
+            max-height: 560px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            background: linear-gradient(160deg, #0d1117 0%, #161b22 100%);
+        }
+
+        .fig-media-info {
+            width: 100%;
+            padding: 1rem 1.5rem 1.25rem;
+            background: #FFFFFF;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.35rem;
+        }
+
+        .fig-media-icon {
+            font-size: 3rem;
+            color: #4B5563;
+            margin-bottom: 0.5rem;
+        }
+
+        .fig-media-title {
+            font-family: var(--font-sans);
+            font-size: 0.88rem;
+            font-weight: 700;
+            color: var(--text-dark);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .fig-media-filename {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.72rem;
+            background-color: #F3F4F6;
+            color: #374151;
+            padding: 0.18rem 0.55rem;
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+        }
+
+        .fig-media-desc {
+            font-size: 0.81rem;
+            color: var(--text-muted);
+            max-width: 600px;
+            line-height: 1.55;
+            text-align: justify;
+        }
+
+        /* Badge de tipo de medio (VIDEO / IMAGEN) */
+        .fig-type-badge {
+            position: absolute;
+            top: 0.85rem;
+            left: 1rem;
+            font-family: var(--font-sans);
+            font-size: 0.6rem;
+            font-weight: 700;
+            letter-spacing: 1.2px;
+            text-transform: uppercase;
+            padding: 0.2rem 0.55rem;
+            border-radius: 4px;
+            z-index: 10;
+            display: none;
+        }
+        .fig-type-badge.show { display: inline-block; }
+        .fig-type-badge.video {
+            background: rgba(6, 95, 70, 0.85);
+            color: #D1FAE5;
+            border: 1px solid rgba(167, 243, 208, 0.3);
+        }
+        .fig-type-badge.image {
+            background: rgba(15, 76, 129, 0.8);
+            color: #DBEAFE;
+            border: 1px solid rgba(147, 197, 253, 0.3);
+        }
+
+        .fig-caption {
+            font-family: var(--font-sans);
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            line-height: 1.5;
+            text-align: justify;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border-color);
+            margin-top: 1.25rem;
+        }
+
+        .fig-caption strong {
+            color: #000000;
+            font-weight: 600;
+        }
+
+        /* NOMOGRAMA INTERACTIVO (CALCULADORA ACADÉMICA INTEGRADA) */
+        .interactive-nomogram {
+            border: 1px solid var(--border-color);
+            background-color: #FBFBFC;
+            padding: 2rem;
+            margin: 2.5rem 0;
+            border-radius: 2px;
+        }
+
+        .nomogram-title {
+            font-family: var(--font-sans);
+            font-size: 0.85rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--primary);
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.4rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .nomogram-body {
+            display: grid;
+            grid-template-columns: 1.2fr 1fr;
+            gap: 2.5rem;
+        }
+
+        @media (max-width: 768px) {
+            .nomogram-body {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+            }
+        }
+
+        .nomogram-control {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .control-label {
+            font-family: var(--font-sans);
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: var(--text-dark);
+            text-transform: uppercase;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .control-val {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .control-slider {
+            width: 100%;
+            height: 4px;
+            background: var(--border-color);
+            outline: none;
+            -webkit-appearance: none;
+            cursor: pointer;
+        }
+
+        .control-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: var(--primary);
+            cursor: pointer;
+        }
+
+        .nomogram-result {
+            border: 1px solid var(--border-color);
+            background-color: #FFFFFF;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+
+        .nomogram-badge {
+            font-family: var(--font-sans);
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 0.25rem 0.75rem;
+            border-radius: 1px;
+            margin-bottom: 0.75rem;
+        }
+
+        .nomogram-badge.danger {
+            background-color: #FDF2F2;
+            color: var(--danger);
+            border: 1px solid #F5C2C2;
+        }
+
+        .nomogram-badge.success {
+            background-color: #F0FDF4;
+            color: var(--success);
+            border: 1px solid #A7F3D0;
+        }
+
+        .nomogram-ku-val {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 2.2rem;
+            font-weight: 700;
+            line-height: 1.1;
+            margin-bottom: 0.5rem;
+        }
+
+        .nomogram-ku-val.danger { color: var(--danger); }
+        .nomogram-ku-val.success { color: var(--success); }
+
+        .nomogram-verdict {
+            font-family: var(--font-sans);
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #000000;
+            margin-bottom: 0.5rem;
+        }
+
+        .nomogram-desc {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            line-height: 1.45;
+            text-align: justify;
+        }
+
+        /* TABLA DE RESULTADOS ESTILO BOOKTABS ACADÉMICO */
+        .table-wrapper {
+            margin: 2.5rem 0;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-family: var(--font-sans);
+            font-size: 0.8rem;
+            border-top: 1.5px solid #000000;
+            border-bottom: 1.5px solid #000000;
+        }
+
+        th {
+            font-weight: 700;
+            color: #000000;
+            padding: 0.75rem 0.5rem;
+            border-bottom: 1px solid #000000;
+            text-transform: uppercase;
+            font-size: 0.72rem;
+            letter-spacing: 0.3px;
+        }
+
+        td {
+            padding: 0.6rem 0.5rem;
+            border-bottom: 0.5px solid var(--border-color);
+            color: var(--text-dark);
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        .section-row {
+            background-color: #FBFBFC;
+        }
+
+        .section-row td {
+            font-weight: 700;
+            color: var(--primary);
+            font-size: 0.75rem;
+            border-bottom: 0.8px solid #E5E7EB;
+            text-transform: uppercase;
+        }
+
+        .highlight-col {
+            background-color: #F9FAFB;
+            font-weight: 600;
+        }
+
+
+
+
+        /* ELEMENTO DESLIZANTE DE LA FIGURA 3 (BALANCE DE MASAS) */
+        .fig-slider-box {
+            margin-top: 1rem;
+            background-color: #FBFBFC;
+            border: 1px solid var(--border-color);
+            padding: 1.25rem;
+            font-family: var(--font-sans);
+        }
+
+        .fig-slider-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 0.75rem;
+        }
+
+        .fig-time-badge {
+            background-color: var(--primary);
+            color: #FFFFFF;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            padding: 0.15rem 0.5rem;
+        }
+
+        .fig-metrics {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-top: 0.75rem;
+        }
+
+        .fig-metric-card {
+            background-color: #FFFFFF;
+            border: 1px solid var(--border-color);
+            padding: 0.75rem;
+            text-align: center;
+        }
+
+        .fig-metric-label {
+            font-size: 0.65rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        .fig-metric-val {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #000000;
+        }
+
+        /* RECOMENDACIONES EN TARJETAS SOBRIAS */
+        .recs-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.25rem;
+            margin-top: 1.5rem;
+        }
+
+        @media (max-width: 768px) {
+            .recs-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .rec-item {
+            border: 1px solid var(--border-color);
+            padding: 1.5rem;
+            background-color: #FFFFFF;
+            transition: var(--transition-smooth);
+        }
+
+        .rec-item:hover {
+            border-color: var(--primary);
+        }
+
+        .rec-header {
+            font-family: var(--font-sans);
+            font-weight: 700;
+            font-size: 0.85rem;
+            color: #000000;
+            text-transform: uppercase;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.4rem;
+            margin-bottom: 0.6rem;
+        }
+
+        .rec-body {
+            font-size: 0.88rem;
+            line-height: 1.55;
+            color: var(--text-muted);
+            text-align: justify;
+        }
+
+        /* REFERENCIAS BIBLIOGRÁFICAS EN ESTILO VANCOUVER */
+        .ref-list {
+            list-style: none;
+            padding-left: 0;
+            margin-top: 1.5rem;
+        }
+
+        .ref-list li {
+            font-family: var(--font-sans);
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            margin-bottom: 0.75rem;
+            line-height: 1.5;
+            padding-left: 1.5rem;
+            text-indent: -1.5rem;
+            text-align: justify;
+        }
+
+        /* FIGURAS DE EVIDENCIA INDUSTRIAL (INLINE EN CONCLUSIONES) */
+        .evidence-figure {
+            margin: 2rem 0 2.25rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 3px 14px rgba(0,0,0,0.07);
+            break-inside: avoid;
+        }
+
+        .evidence-figure img {
+            width: 100%;
+            height: auto;
+            display: block;
+            background: #f0f0f0;
+        }
+
+        .evidence-figure figcaption {
+            font-family: var(--font-sans);
+            font-size: 0.77rem;
+            color: var(--text-muted);
+            padding: 0.7rem 1.1rem;
+            background: #F8F9FA;
+            border-top: 1px solid var(--border-color);
+            line-height: 1.5;
+            text-align: justify;
+        }
+
+        .evidence-figure figcaption strong {
+            color: var(--text-dark);
+        }
+
+        /* Sección 7 en columna única para integrar figuras en el flujo del texto */
+        .sec7-body {
+            font-family: var(--font-serif);
+            font-size: 0.95rem;
+            line-height: 1.75;
+            color: var(--text-dark);
+            text-align: justify;
+        }
+
+        .sec7-body p {
+            margin-bottom: 1.2rem;
+            text-indent: 1.5rem;
+        }
+
+        .sec7-body p:first-of-type {
+            text-indent: 0;
+        }
+
+        /* =====================================================
+           RESPONSIVE MÓVIL — OPTIMIZACIÓN COMPLETA
+           ===================================================== */
+
+        @media (max-width: 768px) {
+
+            /* Layout general */
+            body { font-size: 0.97rem; }
+
+            .article-wrapper {
+                padding: 1rem 0;
+                gap: 0;
+            }
+
+            /* Manuscrito */
+            .manuscript {
+                padding: 1.5rem 1.1rem 2.5rem;
+                border-radius: 0;
+                border-left: none;
+                border-right: none;
+                box-shadow: none;
+            }
+
+            /* Cabecera */
+            .journal-tag {
+                flex-direction: column;
+                gap: 0.2rem;
+                font-size: 0.68rem;
+            }
+
+            .article-title {
+                font-size: 1.35rem;
+                line-height: 1.35;
+                margin-bottom: 1.25rem;
+            }
+
+            .article-dates {
+                flex-wrap: wrap;
+                gap: 0.3rem 1rem;
+                font-size: 0.68rem;
+            }
+
+            /* Doble columna → columna única */
+            .two-columns {
+                column-count: 1;
+                font-size: 0.92rem;
+            }
+
+            /* Ecuaciones con scroll horizontal */
+            .equation-wrapper {
+                overflow-x: auto;
+                padding: 0.75rem 0.5rem;
+            }
+
+            /* Tablas con scroll horizontal */
+            table {
+                display: block;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                font-size: 0.75rem;
+            }
+
+            /* Pestañas del visualizador CFD */
+            .fig-nav-tabs {
+                flex-wrap: wrap;
+                justify-content: flex-start;
+                gap: 0.2rem;
+                padding-bottom: 0.4rem;
+            }
+
+            .fig-tab-btn {
+                font-size: 0.72rem;
+                padding: 0.4rem 0.6rem;
+            }
+
+            /* Selector de variable */
+            .fig-sub-selector {
+                flex-wrap: wrap;
+                width: 100%;
+                justify-content: center;
+            }
+
+            /* Viewport del video */
+            .fig-viewport {
+                min-height: 200px;
+                max-height: 340px;
+            }
+
+            .fig-media-info {
+                padding: 0.75rem 1rem 1rem;
+            }
+
+            .fig-media-title { font-size: 0.78rem; }
+            .fig-media-desc  { font-size: 0.75rem; }
+
+            /* Nomograma */
+            .interactive-nomogram { padding: 1.25rem 1rem; }
+
+            /* Abstract */
+            .abstract-container { padding: 1.25rem; }
+            .abstract-text { font-size: 0.88rem; }
+
+            /* Figuras de evidencia */
+            .evidence-figure { margin: 1.25rem 0; }
+
+            /* Agradecimientos / Referencias */
+            .ref-list li { font-size: 0.75rem; }
+
+            /* Headings */
+            h2 { font-size: 1rem; }
+            h3 { font-size: 0.92rem; }
+
+            .scientific-figure { padding: 1rem; }
+
+            /* SVG plots */
+            svg { max-width: 100%; height: auto; }
+        }
+
+        @media (max-width: 420px) {
+
+            .article-title { font-size: 1.15rem; }
+
+            .manuscript { padding: 1.1rem 0.85rem 2rem; }
+
+            .fig-tab-btn {
+                font-size: 0.66rem;
+                padding: 0.35rem 0.5rem;
+            }
+
+            .fig-viewport {
+                min-height: 160px;
+                max-height: 260px;
+            }
+
+            .fig-type-badge { font-size: 0.55rem; }
+
+            .nomogram-ku-val { font-size: 2.5rem; }
+
+            .control-slider { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="article-wrapper">
+        
+        <!-- FLOTANTE LATERAL: TABLA DE CONTENIDOS -->
+        <div class="sidebar-toc">
+            <div>
+                <div class="toc-header">Secciones del Artículo</div>
+                <ul class="toc-list">
+                    <li><span class="toc-link active" id="toc-resumen" onclick="scrollToSec('resumen')">Resumen Ejecutivo</span></li>
+                    <li><span class="toc-link" id="toc-sec1" onclick="scrollToSec('sec1')">1. Introducción y Falla</span></li>
+                    <li><span class="toc-link" id="toc-sec2" onclick="scrollToSec('sec2')">2. Modelo Físico y Pre-carga</span></li>
+                    <li><span class="toc-link" id="toc-sec3" onclick="scrollToSec('sec3')">3. Modelado Poroso Darcy</span></li>
+                    <li><span class="toc-link" id="toc-sec4" onclick="scrollToSec('sec4')">4. Inicialización Numérica</span></li>
+                    <li><span class="toc-link" id="toc-sec5" onclick="scrollToSec('sec5')">5. Resultados y Renders</span></li>
+                    <li><span class="toc-link" id="toc-sec6" onclick="scrollToSec('sec6')">6. Balance e Inundación</span></li>
+                    <li><span class="toc-link" id="toc-sec7" onclick="scrollToSec('sec7')">7. Conclusiones y Rediseño</span></li>
+                </ul>
+            </div>
+            
+            <div class="metadata-box">
+                <strong>Informe Técnico CFD</strong><br>
+                Publicado en LinkedIn · Mayo 2026<br>
+                Depto. de Ingeniería<br>
+                Reficiencia Refrigeración Industrial
+            </div>
+        </div>
+
+        <!-- MANUSCRITO ACADÉMICO -->
+        <div class="manuscript">
+            
+            <!-- Cabecera de la Publicación -->
+            <div class="journal-tag">
+                <span>Informe Técnico CFD · Publicado en LinkedIn</span>
+                <span>Mayo 2026 · Reficiencia Refrigeración Industrial</span>
+            </div>
+
+            <!-- Título Científico -->
+            <h1 class="article-title">Modelado Dinámico de Flujo Bifásico Transitorio en un Elevador de Succión Húmeda de R-717 a -40°C: Análisis de Estabilidad Nominal y Taponamiento por Control Obsoleto</h1>
+
+            <!-- Bloque de Autores -->
+            <div class="author-section">
+                <div class="author-name">Ariel Angel Cuevas Rojas</div>
+                <div class="author-affiliation">
+                    Departamento de Ingeniería · REFICIENCIA SpA · Santiago, Chile
+                </div>
+            </div>
+
+            <!-- Fechas de Manuscrito -->
+            <div class="article-dates">
+                <span><strong>Received:</strong> 12 January 2026</span>
+                <span><strong>Revised:</strong> 20 May 2026</span>
+                <span><strong>Accepted:</strong> 24 May 2026</span>
+            </div>
+
+            <!-- RESUMEN EJECUTIVO -->
+            <div class="abstract-container" id="sec-resumen">
+                <div class="abstract-title">Resumen</div>
+                <p class="abstract-text">
+                    En los sistemas de refrigeración industrial por recirculado de bomba que operan con amoníaco anhidro ($R\text{-}717$) a baja temperatura ($-40^\circ\text{C}$), el transporte bifásico ascendente en el tramo vertical (elevador o <em>riser</em>) es un punto crítico para asegurar el retorno continuo de líquido al acumulador de baja. En este trabajo se investiga, mediante modelado fluidodinámico computacional (CFD) tridimensional transitorio usando la formulación <em>Volume of Fluid</em> (VOF) en OpenFOAM 10, la estabilidad de flujo del elevador bajo tres escenarios operacionales: (1) operación nominal desnuda a plena carga ($25.0\text{ m/s}$), (2) penalización de pérdida de carga debido al modelado inercial de la estación de válvulas de succión (Danfoss ICLX 125) usando porosidad Darcy-Forchheimer calibrada a $f_x = 815\text{ m}^{-1}$, y (3) colapso hidráulico y taponamiento (<em>liquid slugging</em>) provocado por una caída del 30% en la carga térmica del evaporador (velocidad de vapor a $17.5\text{ m/s}$) acoplado a una sobreinyección de líquido del doble del valor nominal ($0.56\%$ en volumen). Para acelerar el cálculo del transitorio físico de inundación real, se introdujo una técnica de inicialización por pre-carga líquida del $20\%$ ($\alpha = 0.20$) en los tramos horizontales. Los resultados indican que bajo condiciones de falla, la velocidad local del vapor en la sección ensanchada de NPS 5" cae por debajo del número crítico de Kutateladze ($Ku = 2.18 < 3.20$), provocando un reflujo gravitatorio severo y el desarrollo de un régimen de flujo anular ondulado pesado (<em>heavy wavy-annular flow</em>). Esto incrementa la pérdida de carga a $10.76\text{ kPa}$ ($54\%$ de obstrucción dinámica adicional), confirmando el bloqueo hidráulico del riser y provocando el anegamiento del evaporador, la elevación de la presión de evaporación y una severa pérdida de capacidad de congelación en el túnel, lo que genera un inmediato cuello de botella en producción.
+                </p>
+                <div class="keywords-line">
+                    <strong>Palabras Clave:</strong> Refrigeración Industrial; Amoníaco (R-717); Elevador de Succión; CFD Transitorio; Volume of Fluid; Kutateladze; Darcy-Forchheimer.
+                </div>
+            </div>
+
+            <!-- GLOSARIO DE VARIABLES CON FILTRO INTERACTIVO -->
+            <div class="nomenclature-box">
+                <div class="nom-title">Nomenclatura y Variables Físicas</div>
+                <input type="text" id="nom-search" class="nom-filter" placeholder="Buscar variable o definición..." onkeyup="filterNomenclature()">
+                <div class="nom-grid" id="nom-table">
+                    <div class="nom-row" data-term="g gravedad aceleracion 9.81 m/s^2">
+                        <span class="nom-symbol">$g$</span>
+                        <span class="nom-definition">Aceleración de gravedad, $9.81\ \mathrm{m/s^2}$</span>
+                    </div>
+                    <div class="nom-row" data-term="ku kutateladze adimensional estabilidad">
+                        <span class="nom-symbol">$Ku$</span>
+                        <span class="nom-definition">Número de Kutateladze (adimensional)</span>
+                    </div>
+                    <div class="nom-row" data-term="fx arrastre inercial 815 m^-1 forchheimer">
+                        <span class="nom-symbol">$f_x$</span>
+                        <span class="nom-definition">Coeficiente de arrastre inercial, $815\ \mathrm{m^{-1}}$</span>
+                    </div>
+                    <div class="nom-row" data-term="si sumidero momentum cantidad de movimiento N/m^3">
+                        <span class="nom-symbol">$S_i$</span>
+                        <span class="nom-definition">Sumidero de cantidad de movimiento, $\mathrm{N/m^3}$</span>
+                    </div>
+                    <div class="nom-row" data-term="uv velocidad vapor amoniaco m/s">
+                        <span class="nom-symbol">$U_V$</span>
+                        <span class="nom-definition">Velocidad del vapor de amoníaco, $\mathrm{m/s}$</span>
+                    </div>
+                    <div class="nom-row" data-term="ml caudal masivo liquido g/s">
+                        <span class="nom-symbol">$\dot{m}_L$</span>
+                        <span class="nom-definition">Caudal masivo de amoníaco líquido, $\mathrm{g/s}$</span>
+                    </div>
+                    <div class="nom-row" data-term="alpha fraccion volumen liquido vof">
+                        <span class="nom-symbol">$\alpha_L$</span>
+                        <span class="nom-definition">Fracción de volumen de líquido R-717</span>
+                    </div>
+                    <div class="nom-row" data-term="rhol densidad liquido saturado 690 kg/m^3">
+                        <span class="nom-symbol">$\rho_L$</span>
+                        <span class="nom-definition">Densidad del líquido saturado, $690\ \mathrm{kg/m^3}$</span>
+                    </div>
+                    <div class="nom-row" data-term="rhov densidad vapor saturado 0.65 kg/m^3">
+                        <span class="nom-symbol">$\rho_V$</span>
+                        <span class="nom-definition">Densidad del vapor saturado, $0.65\ \mathrm{kg/m^3}$</span>
+                    </div>
+                    <div class="nom-row" data-term="nul viscosidad cinematica liquida m^2/s">
+                        <span class="nom-symbol">$\nu_L$</span>
+                        <span class="nom-definition">Viscosidad cinemática líquida, $4.13 \times 10^{-7}\ \mathrm{m^2/s}$</span>
+                    </div>
+                    <div class="nom-row" data-term="nuv viscosidad cinematica vapor m^2/s">
+                        <span class="nom-symbol">$\nu_V$</span>
+                        <span class="nom-definition">Viscosidad cinemática del vapor, $1.25 \times 10^{-5}\ \mathrm{m^2/s}$</span>
+                    </div>
+                    <div class="nom-row" data-term="sigma tension superficial 0.038 n/m">
+                        <span class="nom-symbol">$\sigma$</span>
+                        <span class="nom-definition">Tensión superficial del R-717, $0.038\ \mathrm{N/m}$</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECCIÓN 1: INTRODUCCIÓN -->
+                <div class="two-columns">
+
+            <div id="sec-sec1">
+                <h2>1. Introducción y Justificación de la Falla</h2>
+                <p>
+                    En los sistemas de refrigeración industrial recirculados por bombeo de amoníaco saturado ($R\text{-}717$) a baja temperatura, mantener la velocidad del vapor por encima del límite crítico de estabilidad es crucial para sostener la película de líquido ascendente y evitar la acumulación retrógrada. Bajo condiciones operativas de carga parcial o escarchamiento acelerado de las baterías del evaporador, la tasa de evaporación colapsa, reduciendo el flujo volumétrico de vapor generado y, por consiguiente, la velocidad de barrido hidráulico en la línea de succión húmeda.
+                </p>
+                <p>
+                    La geometría real en estudio presenta una expansión brusca de diámetro desde NPS 4" ($102.3\text{ mm}$ de diámetro interno comercial, Sch 40) a NPS 5" ($128.2\text{ mm}$ de diámetro interno comercial, Sch 40). Esto genera una caída abrupta del $36.3\%$ en la velocidad de paso del vapor y una consecuente disminución del $59.4\%$ en su energía cinética. Adicionalmente, el elevador carece de un cuello de cisne (sifón invertido de sello) en la cima del tramo vertical antes de descargar en el estanque acumulador húmedo, permitiendo el reflux libre del amoníaco acumulado de regreso al evaporador ante cualquier caída de velocidad.
+                </p>
+            </div>
+
+            <!-- SECCIÓN 2: MODELO FÍSICO -->
+            <div id="sec-sec2">
+                <h2>2. Modelo Físico y Técnica de Pre-carga de Líquido</h2>
+                <p>
+                    Se resolvió la hidrodinámica del flujo bifásico transitorio mediante la formulación <em>Volume of Fluid</em> (VOF) con resolvedores acoplados <code>interFoam</code> en OpenFOAM 10. La interfase líquido-vapor se rastrea mediante la fracción volumétrica local de líquido, $\alpha_L$:
+                </p>
+                
+                <div class="equation-wrapper">
+                    <span class="equation-content">
+                        $$\frac{\partial \alpha_L}{\partial t} + \nabla \cdot (\alpha_L \mathbf{U}) + \nabla \cdot \left[ \mathbf{U}_r \alpha_L (1 - \alpha_L) \right] = 0$$
+                    </span>
+                    <span class="equation-number">(1)</span>
+                </div>
+                
+                <p>
+                    En la operación real de la planta de refrigeración, ante una caída térmica del 30% e inyección excesiva de líquido, la acumulación y taponamiento del riser horizontal y codo de base toma aproximadamente 15 minutos en el reloj de la planta. Resolver 15 minutos físicos mediante CFD transitorio bifásico con micro-pasos de tiempo ($\Delta t \approx 10^{-4}\text{ s}$) requeriría realizar más de $9.0 \times 10^6$ pasos temporales acoplados, consumiendo meses de cálculo ininterrumpido en supercomputadoras.
+                </p>
+                <p>
+                    Para viabilizar este estudio dentro de tiempos de cómputo razonables, se desarrolló la técnica de <strong>Pre-carga de Líquido</strong>. Utilizando la herramienta <code>setFields</code> en OpenFOAM 10, se inicializó una película de amoníaco líquido estancado con una fracción de volumen del 20% ($\alpha_L = 0.20$) en los tramos horizontales bajos e intermedios ($Z \in [4.2, 4.6]\text{ m}$). Esta configuración pre-cargada equivale hidráulicamente a haber simulado los primeros 15 minutos de acumulación real de la planta, permitiendo resolver la dinámica del transitorio de arrastre y la pérdida de carga del taponamiento en solo $5.0\text{ segundos}$ físicos de cálculo de alta fidelidad.
+                </p>
+            </div>
+
+            <!-- SECCIÓN 3: MODELADO POROSO -->
+            <div id="sec-sec3">
+                <h2>3. Modelado Poroso Darcy-Forchheimer para la Estación de Válvulas</h2>
+                <p>
+                    Para representar el cuadro de válvulas de succión (solenoide pilotada Danfoss ICLX 125, reducciones asociadas y codos) sin introducir un mallado físico detallado de las partes internas de la válvula (lo cual habría colapsado la estabilidad del paso de tiempo numérico $\Delta t$ a valores inviables del orden de $10^{-9}\text{ s}$ por alta velocidad y celdas de escala submilimétrica), se implementó la estrategia de volumen poroso homogéneo. Se definió una zona de celdas porosas (<code>valvulaCellZone</code>) en el tramo de transición horizontal medio ($X \in [1.95, 2.05]\text{ m}$, $Z \approx 4.41\text{ m}$) de $0.1\text{ m}$ de longitud.
+                </p>
+                <p>
+                    Se aplicó la formulación inercial de Darcy-Forchheimer a través de <code>system/fvOptions</code>, introduciendo un sumidero de cantidad de movimiento $S_i$ en las ecuaciones de conservación del resolvedor:
+                </p>
+                
+                <div class="equation-wrapper">
+                    <span class="equation-content">
+                        $$S_i = - \left( \mu d_i U_i + \frac{1}{2} \rho f_i |U| U_i \right)$$
+                    </span>
+                    <span class="equation-number">(2)</span>
+                </div>
+                
+                <p>
+                    Donde el coeficiente de arrastre inercial $f_x$ en la dirección del flujo principal fue calibrado rigurosamente mediante el software <em>Danfoss Coolselector 2</em> en <strong>$815\text{ m}^{-1}$</strong>. Esto reproduce con precisión la pérdida de carga real de <strong>$2.70\text{ kPa}$</strong> de la válvula pilotada Danfoss ICLX 125 operando a velocidad nominal ($25.0\text{ m/s}$), asegurando la estabilidad matemática y física del solucionador en OpenFOAM.
+                </p>
+            </div>
+
+            <!-- SECCIÓN 4: INICIALIZACIÓN NUMÉRICA -->
+            <div id="sec-sec4">
+                <h2>4. Estructura de la Malla e Inicialización Numérica</h2>
+                <p>
+                    Se empleó la malla hexaédrica estructurada premium a escala real de metros ($5.053\text{ m}$ de ancho, $3.047\text{ m}$ de profundidad y $9.900\text{ m}$ de alto). La integridad de la malla fue evaluada formalmente mediante <code>checkMesh</code>, certificando su ortogonalidad excelente (promedio de $3.36^\circ$, máxima de $8.35^\circ$) y asimetría controlada ($0.32$), arrojando un resultado general de Mesh OK (Volumen: $0.28125\text{ m}^3$ e internalMesh de $42,435$ hexaedros).
+                </p>
+                <p>
+                    La simulación del transitorio de falla de $5.0\text{ s}$ físicos fue dividida en 20 subdominios balanceados geométricamente mediante el algoritmo <code>scotch</code> y resuelta en $19.2\text{ minutos}$ de tiempo de cálculo paralelo sobre 20 cores MPI en WSL 2. Se almacenaron 51 time steps completos. Tras completar el cálculo, se ejecutó la reconstrucción temporal y espacial unificada mediante el comando <code>reconstructPar -newTimes</code>, dejándolo listo para el análisis y renders estáticos.
+                </p>
+            </div>
+
+            
+                </div>
+
+                <!-- SECCIÓN 5: RESULTADOS Y RENDERS -->
+            <div id="sec-sec5">
+                <h2>5. Resultados de Post-procesamiento y Renders CFD</h2>
+                <p>
+                    Bajo condiciones de operación de planta nominal a plena carga ($U = 25.0\text{ m/s}$ en la entrada), el vapor de amoníaco arrastra de forma continua el $0.28\%$ volumétrico de líquido inyectado. La fase líquida viaja completamente atomizada en régimen de Mist Flow (flujo en neblina) de alta dispersión. Al incorporar la estación de válvulas Danfoss ICLX 125 mediante el modelo poroso, la caída de presión estática neta a través de la línea a plena carga se eleva drásticamente a <strong>$14.72\text{ kPa}$</strong> (un incremento del <strong>$566\%$</strong> en la resistencia hidráulica).
+                </p>
+                
+                <!-- FIGURA 1: VISUALIZADOR CFD MULTICASO INTERACTIVO -->
+                <div class="scientific-figure">
+                    <ul class="fig-nav-tabs">
+                        <li id="fig-btn-c1" class="fig-tab-btn active" onclick="setFigCase(1)">Caso 1: Nominal Desnudo</li>
+                        <li id="fig-btn-c2" class="fig-tab-btn" onclick="setFigCase(2)">Caso 2: Cuadro de Válvulas</li>
+                        <li id="fig-btn-c3" class="fig-tab-btn" onclick="setFigCase(3)">Caso 3: Taponamiento por Control Obsoleto</li>
+                    </ul>
+
+                    <!-- Selector de variable — encima del viewer para flujo natural de interacción -->
+                    <div class="fig-sub-selector">
+                        <button id="fig-sub-alpha" class="fig-sub-btn active" onclick="setFigField('alpha')">Fracción de Líquido (α)</button>
+                        <button id="fig-sub-vel" class="fig-sub-btn" onclick="setFigField('vel')">Velocidades (|U|)</button>
+                        <button id="fig-sub-pres" class="fig-sub-btn" onclick="setFigField('pres')">Presiones (p)</button>
+                    </div>
+
+                    <div class="fig-media-container">
+                        <!-- Viewport oscuro tipo visor científico -->
+                        <div class="fig-viewport">
+                            <span class="fig-type-badge video show" id="fig-type-badge">▶ Video CFD</span>
+                            <video id="fig-video"
+                                style="max-width:100%; max-height:540px; width:auto; height:auto;"
+                                loop muted controls autoplay
+                                src="Videos_render/alpha-sincv.mp4">
+                            </video>
+                            <img id="fig-img" style="display:none; max-width:100%; max-height:540px; width:auto; height:auto;" />
+                            <span class="fig-media-icon" id="fig-icon" style="display:none;">🌀</span>
+                        </div>
+                        <!-- Información del medio -->
+                        <div class="fig-media-info">
+                            <h4 class="fig-media-title" id="fig-title">Fracción de Líquido VOF — Caso Nominal Desnudo</h4>
+                            <div class="fig-media-filename" id="fig-filename">Videos_render/alpha-sincv.mp4</div>
+                            <p class="fig-media-desc" id="fig-desc">
+                                Animación transitoria de fracción de volumen de líquido R-717 a plena carga ($25.0\text{ m/s}$). Se visualiza el régimen Mist Flow en estado estacionario sin acumulación gravitatoria en los tramos verticales.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="fig-caption">
+                        <strong>Figura 2.</strong> Visualizador interactivo de simulaciones CFD transitorias 3-D. Seleccione el caso de estudio y la variable de campo para reproducir la animación correspondiente: distribución de fase líquida (VOF $\alpha_{\mathrm{liquidNH3}}$), magnitud de velocidad de fases $|\mathbf{U}|$ o gradiente de presión estática $p$ para los tres escenarios operativos.
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECCIÓN 6: BALANCE DE MASA -->
+            <div id="sec-sec6">
+                <h2>6. Balance Masivo y Nomograma de Kutateladze</h2>
+                <p>
+                    Para determinar si la velocidad cinemática es capaz de sostener y arrastrar verticalmente el amoníaco líquido viscoso saturado contra la fuerza de gravedad y evitar el reflux contracorriente, aplicamos el número crítico de Kutateladze ($Ku$). En el diseño industrial de risers, para evitar la inundación bifásica y asegurar el flujo ascendente de película líquida, se requiere que $Ku \ge 3.20$, lo que impone una velocidad mínima de vapor en el conducto vertical de **$15.89\text{ m/s}$**:
+                </p>
+                
+                <div class="equation-wrapper">
+                    <span class="equation-content">
+                        $$U_{\text{crítica}} = 3.20 \cdot \frac{\left[ g \cdot \sigma \cdot (\rho_L - \rho_V) \right]^{0.25}}{\rho_V^{0.5}} = 15.89\text{ m/s}$$
+                    </span>
+                    <span class="equation-number">(3)</span>
+                </div>
+                
+                <p>
+                    Al caer la velocidad real en el tramo ensanchado a $11.15\text{ m/s}$, el número de Kutateladze desciende dramáticamente a <strong>$Ku = 2.18$</strong> ($Ku < 3.20$). Este colapso confirma matemáticamente que la energía cinética del vapor es insuficiente para arrastrar la fase líquida pesada. La película líquida e incluso las gotas suspendidas caen libremente por gravedad en contracorriente, acumulándose masivamente y taponando los tramos horizontales bajos e intermedios del elevador.
+                </p>
+
+                <!-- NOMOGRAMA INTERACTIVO KUTATELADZE -->
+                <div class="interactive-nomogram">
+                    <div class="nomogram-title">Nomograma Interactivo de Estabilidad (Cálculo de Ku)</div>
+                    <div class="nomogram-body">
+                        <div class="nomogram-control">
+                            <div class="form-group">
+                                <div class="control-label">
+                                    <span>Velocidad Real del Vapor ($U_V$):</span>
+                                    <span class="control-val"><span id="live-u-val">17.50</span> m/s</span>
+                                </div>
+                                <input type="range" min="5.0" max="30.0" step="0.25" value="17.50" class="control-slider" id="live-u-slider" oninput="updateKutateladzeNomogram(this.value)">
+                            </div>
+                            <p class="editorial-text" style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0; line-height: 1.45;">
+                                Calibrado para R-717 saturado a $-40^\circ\text{C}$ con $\rho_L = 690\ \mathrm{kg/m^3}$, $\rho_V = 0.65\ \mathrm{kg/m^3}$, y $\sigma = 0.038\ \mathrm{N/m}$.
+                            </p>
+                        </div>
+                        
+                        <div class="nomogram-result">
+                            <span class="nomogram-badge danger" id="live-badge">Inundación Critica</span>
+                            <div class="nomogram-ku-val danger" id="live-ku-disp">2.18</div>
+                            <div class="nomogram-verdict" id="live-verdict">Reflujo Gravitatorio Activo</div>
+                            <p class="nomogram-desc" id="live-desc">
+                                El vapor no posee suficiente energía cinética para arrastrar el amoníaco líquido hacia el separador. El amoníaco cae en contracorriente, ahogando el evaporador y elevando la presión de evaporación.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <p>
+                    El caudal de líquido inyectado de forma continua bajo taponamiento por la entrada es estable a <strong>$682.48\text{ g/s}$</strong>. A la salida, la descarga de líquido registra un transitorio multicíclico amortiguado que representa la evacuación de las crestas acumuladas (picos de $1050.20$, $960.50$ y $880.80\text{ g/s}$) antes de decaer hacia el valor estabilizado de $722.17\text{ g/s}$ en flujo anular denso continuo.
+                </p>
+
+                <!-- FIGURA 3: EXPLORADOR DE PASOS DE TIEMPO CON GRÁFICO INTERACTIVO -->
+                <div class="scientific-figure">
+                    <div class="fig-slider-box">
+                        <div class="fig-slider-header">
+                            <span>Reloj Físico Transitorio:</span>
+                            <span class="fig-time-badge"><span id="series-t-val">0.00</span> s</span>
+                        </div>
+                        <input type="range" min="0" max="10" value="0" class="control-slider" id="series-slider" oninput="updateSeriesStep(this.value)">
+                        
+                        <div class="fig-metrics">
+                            <div class="fig-metric-card" style="border-top: 2.5px solid var(--primary);">
+                                <div class="fig-metric-label">Caudal Entrada (m_in)</div>
+                                <div class="fig-metric-val" style="color: var(--primary);"><span id="series-in-val">682.48</span> g/s</div>
+                            </div>
+                            <div class="fig-metric-card" style="border-top: 2.5px solid var(--danger);">
+                                <div class="fig-metric-label">Caudal Salida (m_out)</div>
+                                <div class="fig-metric-val" style="color: var(--danger);"><span id="series-out-val">0.00</span> g/s</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 1.5rem; display: flex; justify-content: center;">
+                        <svg width="600" height="260" viewBox="0 0 600 260" id="fig3-svg">
+                            <!-- Ejes -->
+                            <line x1="50" y1="20" x2="50" y2="220" stroke="#000000" stroke-width="1.2" />
+                            <line x1="50" y1="220" x2="560" y2="220" stroke="#000000" stroke-width="1.2" />
+                            
+                            <!-- Grilla sutil -->
+                            <line x1="50" y1="156.6" x2="560" y2="156.6" stroke="#E5E7EB" stroke-width="0.8" stroke-dasharray="2,2" />
+                            <line x1="50" y1="93.3" x2="560" y2="93.3" stroke="#E5E7EB" stroke-width="0.8" stroke-dasharray="2,2" />
+                            <line x1="50" y1="30" x2="560" y2="30" stroke="#E5E7EB" stroke-width="0.8" stroke-dasharray="2,2" />
+                            
+                            <!-- Etiquetas eje Y -->
+                            <text x="42" y="223" font-family="var(--font-sans)" font-size="8" text-anchor="end">0</text>
+                            <text x="42" y="160" font-family="var(--font-sans)" font-size="8" text-anchor="end">400</text>
+                            <text x="42" y="97" font-family="var(--font-sans)" font-size="8" text-anchor="end">800</text>
+                            <text x="42" y="33" font-family="var(--font-sans)" font-size="8" text-anchor="end">1200</text>
+                            
+                            <!-- Etiquetas eje X -->
+                            <text x="50" y="235" font-family="var(--font-sans)" font-size="8" text-anchor="middle">0.0</text>
+                            <text x="152" y="235" font-family="var(--font-sans)" font-size="8" text-anchor="middle">1.0</text>
+                            <text x="254" y="235" font-family="var(--font-sans)" font-size="8" text-anchor="middle">2.0</text>
+                            <text x="356" y="235" font-family="var(--font-sans)" font-size="8" text-anchor="middle">3.0</text>
+                            <text x="458" y="235" font-family="var(--font-sans)" font-size="8" text-anchor="middle">4.0</text>
+                            <text x="560" y="235" font-family="var(--font-sans)" font-size="8" text-anchor="middle">5.0</text>
+                            
+                            <!-- Curva de Entrada -->
+                            <line x1="50" y1="112" x2="560" y2="112" stroke="#718096" stroke-width="2" stroke-dasharray="4,4" />
+                            
+                            <!-- Curva de Salida (3+ Ciclos Damped) -->
+                            <path d="M 50 220 
+                                     C 101 54, 101 54, 152 153 
+                                     C 203 68.3, 203 68.3, 254 143.5 
+                                     C 305 81.1, 305 81.1, 356 134.1 
+                                     C 407 92.1, 407 92.1, 458 119.8 
+                                     C 509 99.8, 509 99.8, 560 105.7" 
+                                  fill="none" stroke="#7A1C1C" stroke-width="2" />
+                            
+                            <!-- Marcadores estáticos en picos/valles -->
+                            <circle cx="50" cy="220" r="3" fill="#7A1C1C" />
+                            <circle cx="101" cy="54" r="3" fill="#7A1C1C" />
+                            <circle cx="152" cy="153" r="3" fill="#7A1C1C" />
+                            <circle cx="203" cy="68.3" r="3" fill="#7A1C1C" />
+                            <circle cx="254" cy="143.5" r="3" fill="#7A1C1C" />
+                            <circle cx="305" cy="81.1" r="3" fill="#7A1C1C" />
+                            <circle cx="356" cy="134.1" r="3" fill="#7A1C1C" />
+                            <circle cx="458" cy="119.8" r="3" fill="#7A1C1C" />
+                            <circle cx="560" cy="105.7" r="3" fill="#7A1C1C" />
+                            
+                            <!-- Marcador dinámico del slider -->
+                            <circle cx="50" cy="220" r="6" fill="none" stroke="#000000" stroke-width="1.5" id="plot-marker" />
+                        </svg>
+                    </div>
+
+                    <div class="fig-caption">
+                        <strong>Figura 3.</strong> Curvas de balance masivo de líquido transitorio bajo taponamiento. La entrada (azul discontinuo) es estable a $682.48\text{ g/s}$, mientras que la salida (roja) muestra al menos tres ciclos de oscilaciones amortiguadas periódicas (picos en $1050.20$, $960.50$ y $880.80\text{ g/s}$) correspondientes al paso de frentes de película líquida, aproximándose a la estabilización en $722.17\text{ g/s}$ a los $5.0\text{ s}$.
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECCIÓN 7: TABLA COMPARATIVA -->
+            <div id="sec-sec6a">
+                <h2>6. Comparación Cuantitativa de Escenarios Operativos</h2>
+                <p>
+                    Los parámetros físicos tridimensionales y de degradación termodinámica se resumen en la Tabla 1, aplicando un formato formal de publicación indexada.
+                </p>
+                
+                <div class="table-card" style="margin: 2.5rem 0; border-top: 2px solid #111; border-bottom: 2px solid #111; padding: 0.5rem 0; background-color: var(--card-bg);">
+                    <table style="width: 100%; border-collapse: collapse; font-family: var(--font-sans); font-size: 0.85rem; text-align: left; line-height: 1.5;">
+                        <thead>
+                            <tr style="border-bottom: 1.5px solid #111;">
+                                <th style="font-weight: 700; color: #111; padding: 0.8rem 0.5rem; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; width: 34%;">Parámetro Físico / Indicador</th>
+                                <th style="font-weight: 700; color: #111; padding: 0.8rem 0.5rem; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; text-align: center; width: 22%;">Caso 1: Tubería Desnuda</th>
+                                <th style="font-weight: 700; color: #111; padding: 0.8rem 0.5rem; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; text-align: center; width: 22%;">Caso 2: Estación de Válvulas</th>
+                                <th style="font-weight: 700; color: #111; padding: 0.8rem 0.5rem; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; text-align: center; width: 22%;">Caso 3: Control Obsoleto</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- SECCIÓN 1 -->
+                            <tr style="border-bottom: 1px solid #ddd; background-color: #fcfcfc;">
+                                <td colspan="4" style="font-weight: 700; color: #333; font-size: 0.75rem; padding: 0.6rem 0.5rem; text-transform: uppercase; letter-spacing: 0.5px;">1. Dinámica de Fluidos y Límites Cinéticos</td>
+                            </tr>
+                            <tr style="border-bottom: 1px solid #eee;">
+                                <td style="padding: 0.65rem 0.5rem; color: #333;">Velocidad del vapor en la entrada (U<sub>in</sub>)</td>
+                                <td style="padding: 0.65rem 0.5rem; text-align: center; color: #555;">25.0 m/s <span style="font-size: 0.75rem; color: #888; display: block;">(Línea Base)</span></td>
+                                <td style="padding: 0.65rem 0.5rem; text-align: center; color: #555;">25.0 m/s <span style="font-size: 0.75rem; color: #888; display: block;">(Línea Base)</span></td>
+                                <td style="padding: 0.65rem 0.5rem; text-align: center; color: #111; font-weight: 600; background-color: #fff9f9;">17.5 m/s <span style="font-size: 0.75rem; color: #c22; display: block; font-weight: normal;">(Carga Parcial 70%)</span></td>
+                            </tr>
+                            <tr style="border-bottom: 1px solid #eee;">
+                                <td style="padding: 0.65rem 0.5rem; color: #333;">Velocidad de paso en tramo vertical NPS 5"</td>
+                                <td style="padding: 0.65rem 0.5rem; text-align: center; color: #555;">15.92 m/s</td>
+                                <td style="padding: 0.65rem 0.5rem; text-align: center; color: #555;">15.92 m/s</td>
+                                <td style="padding: 0.65rem 0.5rem; text-align: center; color: #b22; font-weight: 600; background-color: #fff9f9;">11.15 m/s <span style="font-size: 0.75rem; color: #c22; display: block; font-weight: normal;">(Colapso)</span></td>
+                            </tr>
+                            <tr style="border-bottom: 1px solid #eee;">
+                                <td style="padding: 0.65rem 0.5rem; color: #333;">Número de Kutateladze (Ku) en vertical NPS 5"</td>
+                                <td style="padding: 0.65rem 0.5rem; text-align: center; color: #555;">3.11 <span style="font-size: 0.75rem; color: #888; display: block;">(Subcrítico, Ku &lt; 3.20)</span></td>
+                                <td style="padding: 0.65rem 0.5rem; text-align: center; color: #555;">3.11 <span style="font-size: 0.75rem; color: #888; display: block;">(Subcrítico, Ku &lt; 3.20)</span></td>
+                                <td style="padding: 0.65rem 0.5rem; text-align: center; color: #b22; font-weight: 600; background-color: #fff9f9;">2.18 <span style="font-size: 0.75rem; color: #c22; display: block; font-weight: normal;">(Inundación / Reflujo)</span></td>
+                            </tr>
+                            
+                            <!-- SECCIÓN 2 -->
+                            <tr style="border-bottom: 1px solid #ddd; background-color: #fcfcfc;">
+                                <td colspan="4" style="font-weight: 700; color: #333; font-size: 0.75rem; padding: 0.6rem 0.5rem; text-transform: uppercase; letter-spacing: 0.5px;">2. Pérdidas de Carga Estática y Taponamiento</td>
+                            </tr>
+                            <tr style="border-bottom: 1px solid #eee;">
+                                <td style="padding: 0.65rem 0.5rem; color: #333;">Fracción de líquido local máxima</td>
+                                <td style="padding: 0.65rem 0.5rem; text-align: center; color: #555;">0.80% <span style="font-size: 0.75rem; color: #888; display: block;">(Neblina fina)</span></td>
+                                <td style="padding: 0.65rem 0.5rem; text-align: center; color: #555;">0.80% <span style="font-size: 0.75rem; color: #888; display: block;">(Neblina fina)</span></td>
+                                <td style="padding: 0.65rem 0.5rem; text-align: center; color: #b22; font-weight: 600; background-color: #fff9f9;">32.0% – 33.1% <span style="font-size: 0.75rem; color: #c22; display: block; font-weight: normal;">(Taponamiento)</span></td>
+                            </tr>
+                            <tr style="border-bottom: 1px solid #eee;">
+                                <td style="padding: 0.65rem 0.5rem; color: #333;">Caída de presión estática neta en elevador ($\Delta P$)</td>
+                                <td style="padding: 0.65rem 0.5rem; text-align: center; color: #555; font-weight: 600;">2.60 kPa <span style="font-size: 0.75rem; color: #888; display: block; font-weight: normal;">(CFD Desnudo)</span></td>
+                                <td style="padding: 0.65rem 0.5rem; text-align: center; color: #555; font-weight: 600;">2.60 kPa <span style="font-size: 0.75rem; color: #888; display: block; font-weight: normal;">(CFD Desnudo)</span></td>
+                                <td style="padding: 0.65rem 0.5rem; text-align: center; color: #b22; font-weight: 600; background-color: #fff9f9;">10.76 kPa <span style="font-size: 0.75rem; color: #c22; display: block; font-weight: normal;">(CFD Riser Inundado)</span></td>
+                            </tr>
+                            <tr style="border-bottom: 1px solid #eee; background-color: #fafbfc;">
+                                <td style="padding: 0.65rem 0.5rem; color: #111; font-weight: 600;">Caída de presión total combinada de la línea (Riser + Válvulas)</td>
+                                <td style="padding: 0.65rem 0.5rem; text-align: center; color: #333; font-weight: 600;">2.60 kPa <span style="font-size: 0.75rem; color: #666; display: block; font-weight: normal;">(Línea Desnuda Sola)</span></td>
+                                <td style="padding: 0.65rem 0.5rem; text-align: center; color: #333; font-weight: 600;">14.72 kPa <span style="font-size: 0.75rem; color: #666; display: block; font-weight: normal;">(Línea Completa Limpia)</span></td>
+                                <td style="padding: 0.65rem 0.5rem; text-align: center; color: #991b1b; font-weight: 700; background-color: #fef2f2;">20.76 kPa <span style="font-size: 0.75rem; color: #b91c1c; display: block; font-weight: normal;">(Bloqueo Crítico Combinado)</span></td>
+                            </tr>
+                            <tr style="border-bottom: 1px solid #eee;">
+                                <td style="padding: 0.65rem 0.5rem; color: #333;">Pérdida inercial del sumidero Darcy-Forchheimer</td>
+                                <td style="padding: 0.65rem 0.5rem; text-align: center; color: #555;">0.00 Pa</td>
+                                <td style="padding: 0.65rem 0.5rem; text-align: center; color: #333;">2.70 kPa <span style="font-size: 0.75rem; color: #666; display: block;">(f<sub>x</sub> = 815 m<sup>-1</sup>)</span></td>
+                                <td style="padding: 0.65rem 0.5rem; text-align: center; color: #555; background-color: #fff9f9;">1.32 kPa <span style="font-size: 0.75rem; color: #666; display: block;">(Bajo flujo)</span></td>
+                            </tr>
+                            
+                            <!-- SECCIÓN 3 -->
+                            <tr style="border-bottom: 1px solid #ddd; background-color: #fcfcfc;">
+                                <td colspan="4" style="font-weight: 700; color: #333; font-size: 0.75rem; padding: 0.6rem 0.5rem; text-transform: uppercase; letter-spacing: 0.5px;">3. Eficiencia Termodinámica e Impacto Operacional</td>
+                            </tr>
+                            <tr style="border-bottom: 1px solid #eee;">
+                                <td style="padding: 0.65rem 0.5rem; color: #333;">Degradación de temp. de saturación en elevador ($\Delta T$)</td>
+                                <td style="padding: 0.65rem 0.5rem; text-align: center; color: #555;">0.71 K</td>
+                                <td style="padding: 0.65rem 0.5rem; text-align: center; color: #555;">0.71 K</td>
+                                <td style="padding: 0.65rem 0.5rem; text-align: center; color: #555; background-color: #fff9f9;">3.08 K <span style="font-size: 0.75rem; color: #666; display: block;">(Ahogamiento local)</span></td>
+                            </tr>
+                            <tr style="border-bottom: 1px solid #eee; background-color: #fafbfc;">
+                                <td style="padding: 0.65rem 0.5rem; color: #111; font-weight: 600;">Degradación de temp. de saturación total en la línea</td>
+                                <td style="padding: 0.65rem 0.5rem; text-align: center; color: #333; font-weight: 600;">0.71 K <span style="font-size: 0.75rem; color: #666; display: block; font-weight: normal;">(Aspiración nominal a -40.71°C)</span></td>
+                                <td style="padding: 0.65rem 0.5rem; text-align: center; color: #333; font-weight: 600;">4.20 K <span style="font-size: 0.75rem; color: #666; display: block; font-weight: normal;">(Aspiración a -44.2°C)</span></td>
+                                <td style="padding: 0.65rem 0.5rem; text-align: center; color: #991b1b; font-weight: 700; background-color: #fef2f2;">5.95 K <span style="font-size: 0.75rem; color: #b91c1c; display: block; font-weight: normal;">(Aspiración a -45.95°C)</span></td>
+                            </tr>
+                            <tr style="border-bottom: none;">
+                                <td style="padding: 0.65rem 0.5rem; color: #333;">Impacto en el Rendimiento del Evaporador / COP</td>
+                                <td style="padding: 0.65rem 0.5rem; text-align: center; color: #888; font-style: italic;">Referencia (100% COP)</td>
+                                <td style="padding: 0.65rem 0.5rem; text-align: center; color: #333; font-weight: 600;">Pérdida 12.6% a 16.8% COP</td>
+                                <td style="padding: 0.65rem 0.5rem; text-align: center; color: #b22; font-weight: 600; background-color: #fff9f9;">Cuello de botella en producción <span style="font-size: 0.75rem; color: #c22; display: block; font-weight: normal;">(Túnel de congelamiento lento)</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+            <!-- SECCIÓN 7: CONCLUSIONES Y RECOMENDACIONES -->
+            <div id="sec-sec7">
+                <h2>7. Conclusiones y Recomendaciones de Ingeniería de Planta</h2>
+
+                <div class="sec7-body">
+                    <p>
+                        Para mitigar el problema de sobreinundación y taponamiento hidráulico en los evaporadores del túnel de congelación, es imperativo optimizar la tasa de circulación (CR) del sistema de recirculado por bomba. La solución propuesta consiste en reemplazar las válvulas de inyección de accionamiento lento por válvulas modulantes de cierre rápido (como la serie MVS661..N de Siemens o equivalentes en el mercado), las cuales garantizan tiempos de posicionamiento inferiores a un segundo <sup>[4]</sup>.
+                    </p>
+
+                    <p>
+                        Esta válvula debe acoplarse directamente a un sensor capacitivo dieléctrico instalado en la tubería a la salida del evaporador, el cual mide volumétricamente la fracción de vacío y el título de vapor (calidad) <sup>[1]</sup>. El esquema siguiente ilustra el montaje recomendado del sensor HBX-OVC en la línea de succión superior con la pendiente adecuada hacia el riser:
+                    </p>
+
+                    <figure class="evidence-figure">
+                        <img src="Installation example que ilustra el sensor HBX-OVC montado en la linea de succión superior con pendiente hacia el riser).png"
+                             alt="Ejemplo de instalación del sensor HBX-OVC en la línea de succión superior con pendiente hacia el riser">
+                        <figcaption>
+                            <strong>Fig. A.</strong> Ejemplo de instalación (<em>Installation example</em>) del sensor capacitivo HBX-OVC de HB Products montado en la línea de succión superior con pendiente hacia el riser. El sensor mide la fracción de vacío y el título de vapor en tiempo real para el control OVC del evaporador. Fuente: Elstroem (2018) <sup>[1]</sup>.
+                        </figcaption>
+                    </figure>
+
+                    <p>
+                        En sistemas sobreinundados, esta tecnología permite implementar una estrategia de Control Óptimo de Vapor (OVC). Al monitorear la mezcla en tiempo real, el sistema ajusta la inyección para operar con una tasa de circulación mínima y controlada. Esta reducción del exceso de líquido circulante disminuye drásticamente la caída de presión en la línea de succión húmeda, asegurando que el refrigerante mantenga una velocidad de arrastre estable en el elevador vertical y previniendo la acumulación de líquido que deriva en regímenes intermitentes o de flujo tapón (<em>slug flow</em>). La gráfica siguiente muestra cómo la señal capacitiva permite identificar con claridad el régimen inestable frente al flujo anular estable <sup>[1,2]</sup>:
+                    </p>
+
+                    <figure class="evidence-figure">
+                        <img src="Flow vs. Capacitance.png"
+                             alt="Gráfico Flow vs. Capacitance: identificación de slug flow vs. annular flow mediante señal capacitiva">
+                        <figcaption>
+                            <strong>Fig. B.</strong> Gráfico <em>Flow vs. Capacitance</em>. La señal capacitiva del sensor HBX-OVC discrimina con precisión el régimen de flujo tapón (<em>slug flow</em>, señal ruidosa e inestable) frente al flujo anular estable (<em>annular flow</em>, señal plana y continua), habilitando el control dinámico de la inyección. Fuente: Elstroem (2018) <sup>[1]</sup>.
+                        </figcaption>
+                    </figure>
+
+                    <p>
+                        La viabilidad operativa de optimizar la inyección midiendo la fracción de vacío en sistemas por recirculación de bomba ha sido validada industrialmente. Un caso representativo es el frigorífico de la empresa Claus Sørensen A/S, donde se instalaron sensores capacitivos en elevadores de succión de 8 metros de altura <sup>[1]</sup>. El monitoreo en tiempo real permitió identificar regímenes de flujo tipo tapón originados por una alimentación no homogénea, facilitando un control de inyección que estabilizó el flujo a un patrón anular continuo. Los datos de campo obtenidos evidencian la diferencia entre un elevador con <em>slug flow</em> y uno estabilizado con flujo anular:
+                    </p>
+
+                    <figure class="evidence-figure">
+                        <img src="Field-test at Claus Sorensen AS que evidencia en datos reales la diferencia entre un elevador con slug flow y uno estabilizado con flujo anular.png"
+                             alt="Prueba de campo en Claus Sørensen A/S: slug flow vs. flujo anular estabilizado">
+                        <figcaption>
+                            <strong>Fig. C.</strong> Prueba de campo (<em>Field-test</em>) en las instalaciones de Claus Sørensen A/S. Los datos en tiempo real evidencian la transición de un régimen de flujo tapón inestable a un flujo anular continuo una vez aplicado el control de inyección por sensor capacitivo en el riser de 8 m de altura. Fuente: Elstroem (2018) <sup>[1]</sup>.
+                        </figcaption>
+                    </figure>
+
+                    <p>
+                        Asimismo, en el sector avícola, la empresa Transavia en Rumania solucionó problemas similares al modernizar las líneas de sus túneles de congelación rápida ($-40\,^\circ\text{C}$) <sup>[2]</sup>. Utilizando sistemas de recirculado con bombas de amoníaco a 3 bar, acoplaron sensores de calidad de vapor a válvulas modulantes (como válvulas de pulso AKVA) en la inyección de los evaporadores. Al configurar un título de vapor objetivo de $x = 0{,}90$ (tasa de circulación CR = 1,1), lograron una excelente correlación entre el rendimiento térmico y el control de líquido, minimizando con éxito la caída de presión en las líneas de succión húmeda y evitando el ahogamiento hidráulico del sistema. La siguiente captura del sistema SCADA evidencia el control automatizado implementado en los túneles de Transavia:
+                    </p>
+
+                    <figure class="evidence-figure">
+                        <img src="WinCC SCADA System - Abator TRANSAVIA.png"
+                             alt="Sistema WinCC SCADA - Abator TRANSAVIA: control automatizado de la inyección en túneles de congelación">
+                        <figcaption>
+                            <strong>Fig. D.</strong> Captura del sistema WinCC SCADA — Abator TRANSAVIA (Rumania). La pantalla de supervisión evidencia el control automatizado de la inyección de amoníaco en los túneles de congelación rápida a $-40\,^\circ\text{C}$, logrando CR = 1,1 y eliminando el ahogamiento hidráulico de la línea de succión húmeda. Fuente: Elstroem (2018) <sup>[2]</sup>.
+                        </figcaption>
+                    </figure>
+                </div>
+
+                <h3 style="margin-top: 3rem; margin-bottom: 0.5rem; text-transform: uppercase; font-size: 0.85rem; color:#000000; letter-spacing:0.5px;">Agradecimientos</h3>
+                <p class="editorial-text" style="font-size: 0.88rem; color: var(--text-muted); text-align: justify; margin-bottom: 3rem;">
+                    Los autores agradecen a <strong style="color: var(--text-dark);">REFICIENCIA SpA</strong> por proporcionar el tiempo y los recursos de Investigación y Desarrollo (I+D) que hicieron posible la realización de este estudio. Se agradece asimismo al <strong style="color: var(--text-dark);">Departamento de Ingeniería Mecánica de la Universidad de Santiago de Chile (USACH)</strong> y a la <strong style="color: var(--text-dark);">Universidad Nacional de Sarmiento</strong>, quienes en conjunto dictaron el curso introductorio de OpenFOAM que sentó las bases metodológicas del presente trabajo numérico.
+                </p>
+
+                <h3 style="text-transform: uppercase; font-size: 0.85rem; color:#000000; letter-spacing:0.5px; border-bottom: 1px solid var(--border-color); padding-bottom: 0.35rem; margin-bottom: 1rem;">Referencias Bibliográficas</h3>
+                <ul class="ref-list">
+                    <li>[1] Elstroem, M. (2018). Capacitive Sensors Measuring the Vapor Quality, Phase of the refrigerant and Ice thickness for Optimized evaporator performance. Artículo presentado en <em>13th IIR Gustav Lorentzen Conference</em>, Valencia, España. DOI: 10.18462/iir.gl.2018.1150.</li>
+                    <li>[2] Elstroem, M. (2018). <em>New sensor technologies optimize evaporator performance on both DX, flooded and pump circulation systems</em> [Presentación técnica]. ChillVenta 2018. HB Products A/S.</li>
+                    <li>[3] Departamento de Ingeniería, Reficiencia Refrigeración Industrial. (2026). Modelado Dinámico de Flujo Bifásico Transitorio en un Elevador de Succión Húmeda de R-717 a -40°C: Análisis de Estabilidad Nominal y Taponamiento por Control Obsoleto. Santiago, Chile. Informe técnico publicado en LinkedIn, Mayo 2026.</li>
+                    <li>[4] Siemens Switzerland Ltd. (2019). <em>Data Sheet for ACVATIX™ Modulating refrigerant valves, PN 63 MVS661..N for ammonia (R717) and safety refrigerants</em> (Documento CE2N4717en). Smart Infrastructure, Global Headquarters.</li>
+                </ul>
+            </div>
+            
+        </div>
+    </div>
+
+    <!-- CÓDIGO JS DE INTERACTIVIDAD EDITORIAL RIGUROSA -->
+    <script>
+        // --- 1. Filtro en Vivo de la Nomenclatura Científica ---
+        function filterNomenclature() {
+            const query = document.getElementById('nom-search').value.toLowerCase();
+            const rows = document.querySelectorAll('.nom-row');
+            
+            rows.forEach(row => {
+                const text = row.getAttribute('data-term');
+                if (text.includes(query)) {
+                    row.style.display = 'flex';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        // --- 2. Tabla de Contenidos Activa según el Scroll (TOC Scrollspy) ---
+        const sections = [
+            'resumen', 'sec1', 'sec2', 'sec3', 'sec4', 'sec5', 'sec6', 'sec7'
+        ];
+
+        window.addEventListener('scroll', () => {
+            let current = '';
+            
+            sections.forEach(sec => {
+                const el = document.getElementById('sec-' + sec);
+                if (el) {
+                    const rect = el.getBoundingClientRect();
+                    // Detectar si la sección está en la mitad superior del viewport
+                    if (rect.top <= 180) {
+                        current = sec;
+                    }
+                }
+            });
+            
+            document.querySelectorAll('.toc-link').forEach(link => {
+                link.classList.remove('active');
+                if (current && link.id === 'toc-' + current) {
+                    link.classList.add('active');
+                }
+            });
+        });
+
+        function scrollToSec(secId) {
+            const el = document.getElementById('sec-' + secId);
+            if (el) {
+                window.scrollTo({
+                    top: el.offsetTop - 40,
+                    behavior: 'smooth'
+                });
+            }
+        }
+
+        // --- 3. Control del Visualizador CFD Interactivo de Renders (Figura 2) ---
+        let currentFigCase = 1;
+        let currentFigField = 'alpha';
+
+        const cfdMedia = {
+            1: {
+                alpha: {
+                    title: "Fracción de Líquido VOF — Caso Nominal Desnudo",
+                    file: "Videos_render/alpha-sincv.mp4",
+                    desc: "Animación transitoria de fracción de volumen de líquido R-717 a plena carga ($25.0\\text{ m/s}$). Se visualiza el régimen Mist Flow en estado estacionario sin acumulación gravitatoria en los tramos verticales ni en los codos horizontales."
+                },
+                vel: {
+                    title: "Magnitud de Velocidad de Fases — Caso Nominal Desnudo",
+                    file: "Videos_render/U-sincv.mp4",
+                    desc: "Animación transitoria de magnitud de velocidad. Alta velocidad estable del vapor ($25.0\\text{ m/s}$ en la entrada, $15.92\\text{ m/s}$ en la vertical NPS 5\") arrastrando continuamente el amoníaco líquido. Flujo estable sin reflux gravitatorio."
+                },
+                pres: {
+                    title: "Gradiente de Presión Estática — Caso Nominal Desnudo",
+                    file: "Videos_render/p-sincv.mp4",
+                    desc: "Animación transitoria del campo de presión estática. Pérdida de carga neta de $2.60\\text{ kPa}$ a través del elevador desnudo. Gradiente suave y continuo sin singularidades de presión anómalas."
+                }
+            },
+            2: {
+                alpha: {
+                    title: "Fracción de Líquido VOF — Cuadro de Válvulas (Caso 2)",
+                    file: "Videos_render/alpha-concv.mp4",
+                    desc: "Animación transitoria de la fracción de volumen líquido con válvula Danfoss ICLX 125 modelada como zona porosa. El flujo conserva el régimen Mist Flow con acumulaciones menores de película en las paredes exteriores de los codos."
+                },
+                vel: {
+                    title: "Magnitud de Velocidad en Sección Porosa — Caso 2",
+                    file: "Videos_render/U-concv.mp4",
+                    desc: "Animación transitoria de velocidades con sumidero de momentum inercial (fvOptions). La zona porosa representativa de la válvula genera una aceleración local del vapor a través de la constricción equivalente del área de flujo."
+                },
+                pres: {
+                    title: "Caída de Presión Estática — Cuadro de Válvulas (Caso 2)",
+                    file: "Videos_render/p-concv.mp4",
+                    desc: "Animación transitoria del gradiente de presión estática. La zona porosa homogeneizada simula una pérdida localizada de $2.70\\text{ kPa}$ en la sección equivalente a la válvula Danfoss ICLX 125."
+                }
+            },
+            3: {
+                alpha: {
+                    title: "Régimen Heavy Wavy-Annular — Control de Inyección Obsoleto (Caso 3)",
+                    file: "Videos_render/alpha-falla.mp4",
+                    desc: "Animación transitoria de fracción de líquido bajo taponamiento ($U_V = 17.5\\text{ m/s}$, $Ku = 2.18$). Se observa el desarrollo progresivo del taponamiento severo ($32\\%–33\\%$ de fracción líquida) bloqueando los codos de transición."
+                },
+                vel: {
+                    title: "Campo de Velocidad y Bloqueo por Película — Control Obsoleto (Caso 3)",
+                    file: "Videos_render/U-falla.mp4",
+                    desc: "Animación transitoria de velocidades bajo taponamiento. Muestra el estrangulamiento del área útil y la violenta aceleración del vapor a través del canal estrecho sobre la piscina líquida en contracorriente gravitatoria."
+                },
+                pres: {
+                    title: "Gradiente de Presión e Inundación de Líquido — Control Obsoleto (Caso 3)",
+                    file: "Videos_render/p-falla.mp4",
+                    desc: "Animación transitoria de presión estática bajo taponamiento. Muestra la pérdida de presión dinámica sobreelevada a $10.76\\text{ kPa}$ debida a la restricción geométrica severa de la película de amoníaco saturado acumulada."
+                }
+            }
+        };
+
+        function setFigCase(caseNum) {
+            currentFigCase = caseNum;
+            document.querySelectorAll('.fig-nav-tabs .fig-tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById('fig-btn-c' + caseNum).classList.add('active');
+            updateFigViewer();
+        }
+
+        function setFigField(fieldName) {
+            currentFigField = fieldName;
+            document.querySelectorAll('.fig-sub-selector .fig-sub-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById('fig-sub-' + fieldName).classList.add('active');
+            updateFigViewer();
+        }
+
+        function updateFigViewer() {
+            const data = cfdMedia[currentFigCase][currentFigField];
+
+            const container = document.querySelector('.fig-media-container');
+            const videoEl  = document.getElementById('fig-video');
+            const imgEl    = document.getElementById('fig-img');
+            const iconEl   = document.getElementById('fig-icon');
+            const badge    = document.getElementById('fig-type-badge');
+
+            container.style.opacity = 0.35;
+
+            setTimeout(() => {
+                document.getElementById('fig-title').innerText    = data.title;
+                document.getElementById('fig-filename').innerText = data.file;
+                document.getElementById('fig-desc').innerHTML     = data.desc;
+
+                // Ocultar todos los elementos de medio
+                videoEl.style.display = 'none';
+                imgEl.style.display   = 'none';
+                iconEl.style.display  = 'none';
+                badge.className       = 'fig-type-badge';
+
+                const file = data.file;
+                if (file.endsWith('.mp4') || file.endsWith('.webm')) {
+                    videoEl.src = file;
+                    videoEl.style.display = 'block';
+                    badge.className = 'fig-type-badge video show';
+                    badge.textContent = '▶ Video CFD';
+                    videoEl.load();
+                    videoEl.play().catch(() => {});
+                } else if (/\.(png|jpe?g|webp|gif)$/i.test(file)) {
+                    imgEl.src = file;
+                    imgEl.style.display = 'block';
+                    badge.className = 'fig-type-badge image show';
+                    badge.textContent = '■ Imagen';
+                } else {
+                    const iconMap = { alpha: '🌀', vel: '⚡', pres: '📊' };
+                    iconEl.textContent   = iconMap[currentFigField] || '📁';
+                    iconEl.style.display = 'block';
+                }
+
+                container.style.opacity = 1;
+
+                if (window.MathJax && MathJax.typesetPromise) {
+                    MathJax.typesetPromise([document.getElementById('fig-desc')]);
+                }
+            }, 120);
+        }
+
+                // --- 4. Nomograma de Kutateladze Interactivo (Calculadora de Ku) ---
+        function updateKutateladzeNomogram(velocity) {
+            const rho_L = 690.0;
+            const rho_V = 0.65;
+            const g = 9.81;
+            const sigma = 0.038;
+            
+            document.getElementById('live-u-val').innerText = parseFloat(velocity).toFixed(2);
+            
+            const denominator = Math.pow(g * sigma * (rho_L - rho_V), 0.25);
+            const ku = (velocity * Math.sqrt(rho_V)) / denominator;
+            
+            const kuDisp = document.getElementById('live-ku-disp');
+            kuDisp.innerText = ku.toFixed(2);
+            
+            const badge = document.getElementById('live-badge');
+            const verdict = document.getElementById('live-verdict');
+            const desc = document.getElementById('live-desc');
+            
+            if (ku >= 3.20) {
+                kuDisp.className = "nomogram-ku-val success";
+                badge.className = "nomogram-badge success";
+                badge.innerText = "Arrastre Estable";
+                verdict.innerText = "Película Líquida Ascendente";
+                desc.innerText = "El vapor de amoníaco posee suficiente energía cinética para sostener y barrer continuamente la película de líquido vertical en contracorriente, asegurando una tubería libre de holdup acumulado.";
+            } else {
+                kuDisp.className = "nomogram-ku-val danger";
+                badge.className = "nomogram-badge danger";
+                badge.innerText = "Inundación Crítica";
+                verdict.innerText = "Reflujo Gravitatorio Activo";
+                desc.innerText = "La velocidad del vapor es insuficiente. Las fuerzas de arrastre son superadas por el peso del amoníaco líquido saturado, provocando el reflux gravitatorio y el taponamiento horizontal.";
+            }
+        }
+
+        // --- 5. Deslizador Interactivo de la Curva de Balance de Masa (Figura 3) ---
+        const seriesData = [
+            { t: "0.00", inlet: 682.48, outlet: 0.00, cx: 50, cy: 220 },
+            { t: "0.50", inlet: 682.48, outlet: 1050.20, cx: 101, cy: 54 },
+            { t: "1.00", inlet: 682.48, outlet: 420.10, cx: 152, cy: 153 },
+            { t: "1.50", inlet: 682.48, outlet: 960.50, cx: 203, cy: 68.3 },
+            { t: "2.00", inlet: 682.48, outlet: 480.30, cx: 254, cy: 143.5 },
+            { t: "2.50", inlet: 682.48, outlet: 880.80, cx: 305, cy: 81.1 },
+            { t: "3.00", inlet: 682.48, outlet: 540.40, cx: 356, cy: 134.1 },
+            { t: "3.50", inlet: 682.48, outlet: 810.60, cx: 407, cy: 92.1 },
+            { t: "4.00", inlet: 682.48, outlet: 630.20, cx: 458, cy: 119.8 },
+            { t: "4.50", inlet: 682.48, outlet: 760.50, cx: 509, cy: 99.8 },
+            { t: "5.00", inlet: 682.48, outlet: 722.17, cx: 560, cy: 105.7 }
+        ];
+
+        function updateSeriesStep(index) {
+            const data = seriesData[index];
+            document.getElementById('series-t-val').innerText = data.t;
+            document.getElementById('series-in-val').innerText = data.inlet.toFixed(2);
+            document.getElementById('series-out-val').innerText = data.outlet.toFixed(2);
+            
+            const marker = document.getElementById('plot-marker');
+            marker.setAttribute('cx', data.cx);
+            marker.setAttribute('cy', data.cy);
+            
+            if (data.outlet > 900) {
+                marker.setAttribute('r', 8);
+                setTimeout(() => marker.setAttribute('r', 6), 80);
+            }
+        }
+
+        // Inicializar funciones interactivas en carga
+        window.addEventListener('DOMContentLoaded', () => {
+            updateKutateladzeNomogram(17.50);
+            updateSeriesStep(0);
+            updateFigViewer();
+        });
+    </script>
+</body>
+</html>
